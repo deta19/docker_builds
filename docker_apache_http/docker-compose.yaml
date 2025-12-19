@@ -1,0 +1,56 @@
+services:
+  dockerdatabase:
+    image: mysql:8.0
+    container_name: dockerdatabase
+    restart: always
+    ports:
+        - 3307:3306
+    environment:
+      MYSQL_DATABASE: "dockerdatabase_mysql"
+      MYSQL_USER: "pmauser"
+      MYSQL_PASSWORD: 'parola'
+      MYSQL_ROOT_PASSWORD: 'rootpassword'
+    volumes:
+      - db_dockerdatabase:/var/lib/mysql
+      - ./my.cnf:/etc/mysql/conf.d/my.cnf
+    networks:
+      - dockerapp-network
+
+  dockerphp:
+    container_name: dockerphp
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 80:80
+    depends_on:
+      - dockerdatabase
+    volumes:
+      - ./public:/var/www/html
+      - ./apache/000-default.conf:/etc/apache2/sites-available/000-default.conf
+      - ./apache/000-default.conf:/etc/apache2/sites-enabled/000-default.conf
+    networks:
+      - dockerapp-network
+    
+  dockerphpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: dockerdatabase-phpmyadmin
+    restart: unless-stopped
+    depends_on:
+      - dockerdatabase
+    environment:
+      PMA_HOST: dockerdatabase
+      MYSQL_ROOT_PASSWORD: 'rootpass'
+      UPLOAD_LIMIT: 300M
+    ports:
+      - "3318:80"
+    networks:
+      - dockerapp-network
+    volumes:
+      - ./php.ini:/usr/local/etc/php/conf.d/custom-php.ini
+
+volumes:
+  db_dockerdatabase:
+networks:
+  dockerapp-network:
+    driver: bridge
